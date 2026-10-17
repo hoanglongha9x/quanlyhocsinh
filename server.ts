@@ -1,6 +1,8 @@
-import express, { Request, Response } from 'express';
+import express from 'express';
+import type { Request, Response } from 'express';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
 
@@ -15,10 +17,10 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Health check
-app.get('/api/health', (_req: Request, res: Response) => {
+// Health check endpoints for Cloud Run & monitoring
+app.get(['/api/health', '/healthz', '/health', '/ping'], (_req: Request, res: Response) => {
   res.setHeader('Content-Type', 'application/json');
-  res.json({
+  res.status(200).json({
     status: 'ok',
     app: 'ClassCare AI',
     timestamp: new Date().toISOString(),
@@ -156,7 +158,9 @@ Kế hoạch gồm: 1. Mục tiêu cụ thể, 2. Phân công (GVCN, GVBM, GVQN,
 
 // Vite middleware in dev or static files in production
 async function startServer() {
-  const isDev = process.env.NODE_ENV !== 'production' && !process.env.VERCEL;
+  const distPath = path.resolve(__dirname, 'dist');
+  const hasDist = fs.existsSync(path.resolve(distPath, 'index.html'));
+  const isDev = !hasDist && process.env.NODE_ENV !== 'production' && !process.env.VERCEL;
 
   if (isDev) {
     const { createServer } = await import('vite');
@@ -166,7 +170,6 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.resolve(__dirname, 'dist');
     app.use(express.static(distPath));
     app.get('*', (_req: Request, res: Response) => {
       res.sendFile(path.resolve(distPath, 'index.html'));
@@ -175,8 +178,12 @@ async function startServer() {
 
   // Only listen when running standalone, not in Vercel serverless function
   if (!process.env.VERCEL) {
-    app.listen(PORT, () => {
+    const server = app.listen(Number(PORT), '0.0.0.0', () => {
       console.log(`ClassCare AI server running on http://0.0.0.0:${PORT}`);
+    });
+
+    server.on('error', (err: any) => {
+      console.error('ClassCare AI server error:', err);
     });
   }
 }
