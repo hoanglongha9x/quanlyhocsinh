@@ -1,0 +1,6 @@
+{
+  "name": "ClassCare AI",
+  "description": "Hệ thống Quản lý Giáo dục & Học sinh Nội trú THPT dành cho Giáo viên Chủ nhiệm",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
